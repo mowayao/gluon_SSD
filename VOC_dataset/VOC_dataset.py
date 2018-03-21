@@ -3,6 +3,7 @@ import cv2
 import mxnet as mx
 import numpy as np
 from .parsexml import parseFile
+from SSD.config import Config as cfg
 class VOCDataset(mx.gluon.data.Dataset):
 	voc_class_name = ['person', 'bird', 'cat', 'cow', 'dog',
 					  'horse', 'sheep', 'aeroplane', 'bicycle', 'boat',
@@ -26,6 +27,7 @@ class VOCDataset(mx.gluon.data.Dataset):
 		img = cv2.imread(img_path)
 		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 		anno_path = os.path.join(self.annotation_dir, idx + '.xml')
+		standard_gt = np.ones(shape=(56, 5), dtype=np.float32) * -1.0
 		gt = self.convert_gt_into_array(parseFile(anno_path))
 		if self.resize_func is not None:
 			img, scale = self.resize_func(img)
@@ -34,10 +36,12 @@ class VOCDataset(mx.gluon.data.Dataset):
 			scale = 1
 		gt[:, 1:] = gt[:, 1:].copy() * np.array(scale, dtype=np.float32)
 
-		if self.transform is None:
-			return img, gt
-		else:
-			return self.transform(img, gt)
+		if self.transform != None:
+			img, gt = self.transform(img, gt)
+		gt[:, 1:] = gt[:, 1:] / cfg.img_size
+		standard_gt[:len(gt)] = gt.copy()
+		return img, standard_gt
+
 	def __len__(self):
 		return len(self.dataset_index)
 	def convert_gt_into_array(self, gt, filter_difficult=True):
