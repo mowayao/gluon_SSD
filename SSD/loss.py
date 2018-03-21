@@ -25,15 +25,13 @@ class FocalLoss(nn.loss.Loss):
 	def hybrid_forward(self, F, x, y, ignore_label=-1.):
 		output = F.softmax(x)
 		pt = F.pick(output, y, axis=self._axis)
-		ignore_mask = y == ignore_label ##igore samples
 		mask = y != ignore_label
 		loss = -self._alpha * ((1 - pt) ** self._gamma) * F.log(pt) * mask
-		return F.sum(loss) / (output.shape[0] - F.sum(ignore_mask))
+		return F.sum(loss) / F.sum(mask)
 
 class SmoothL1Loss(nn.loss.Loss):
 	def __init__(self, batch_axis=0, **kwargs):
 		super(SmoothL1Loss, self).__init__(None, batch_axis, **kwargs)
 	def hybrid_forward(self, F, output, label, mask):
-		loss = F.smooth_l1((output-label) * mask, scalar=3.0)
+		loss = F.smooth_l1((output-label) * mask, scalar=1.0)
 		return F.sum(loss) / F.sum(mask)
-		#return F.mean(loss, axis=self._batch_axis, exclude=True)

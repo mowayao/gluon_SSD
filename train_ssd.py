@@ -23,7 +23,7 @@ def train_transformation(data, label):
 
 def training_targets(anchors, class_preds, label):
 	class_preds = F.transpose(class_preds, axes=(0, 2, 1))
-	z = MultiBoxTarget(anchors, label, class_preds, negative_mining_ratio=3, ignore_label=-1, overlap_threshold=0.5, negative_mining_thresh=0.5)
+	z = MultiBoxTarget(anchors, label, class_preds, negative_mining_ratio=3)
 	box_target = z[0]
 	box_mask = z[1]
 	cls_target = z[2]
@@ -46,15 +46,15 @@ for _ in xrange(len(train_dataset)):
 print "max objects", m ,56
 print "min objects", n ,1
 '''
-ctx = mx.gpu(3)
-train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+ctx = mx.gpu(0)
+train_dataloader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True)
 
 
 
 
 net = build_ssd("train", 300, ctx)
 net.params_init(ctx)
-lr_scheduler = mx.lr_scheduler.FactorScheduler(step=60000, factor=0.5, stop_factor_lr=cfg.min_lr)
+lr_scheduler = mx.lr_scheduler.FactorScheduler(step=cfg.decay_step, factor=cfg.decay_ratio, stop_factor_lr=cfg.min_lr)
 trainer = mx.gluon.trainer.Trainer(net.collect_params(),
                                     'sgd',
                                     {'learning_rate': cfg.base_lr,
@@ -63,7 +63,7 @@ trainer = mx.gluon.trainer.Trainer(net.collect_params(),
 									 'lr_scheduler': lr_scheduler})
 
 #print train_dataloader
-focal_cls_loss = FocalLoss(axis=1)
+focal_cls_loss = FocalLoss(axis=2)
 box_loss = SmoothL1Loss()
 cls_loss = SoftmaxLoss()
 
@@ -83,16 +83,12 @@ for epoch in xrange(1, cfg.epochs+1):
 		btic = time.time()
 		data = data.as_in_context(ctx)
 		label = label.as_in_context(ctx)
-		#true_label = label.copy()
 		cls_loss_list = list()
 		reg_loss_list = list()
 		with mx.autograd.record():
 			anchors, class_preds, box_preds = net(data)
-			label[:, :, 1:] /= cfg.img_size
-
-			label = F.concat(*[label, F.ones_like(label, ctx=ctx)*-1, F.ones_like(label, ctx=ctx)*-1], dim=1)
 			box_target, box_mask, cls_target = training_targets(anchors, class_preds, label)
-			loss1 = focal_cls_loss(class_preds[0], cls_target[0], -1)
+			loss1 = focal_cls_loss(class_preds, cls_target, -1.)
 			loss2 = box_loss(box_preds, box_target, box_mask)
 			loss = loss1 + loss2
 		cls_loss_list.append(F.mean(loss1)[0].asscalar())

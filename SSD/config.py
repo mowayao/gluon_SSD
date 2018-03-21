@@ -16,10 +16,10 @@ class Config:
 	test_dataset_index = '../data/VOC_dataset/VOC2012/ImageSets/Main/test.txt'
 	test_img_dir = '../data/object_detection/VOC_dataset/VOC2012/JPEGImages/'
 	num_classes = 21
-	batch_size = 1
-	epochs = 30
+	batch_size = 6
+	epochs = 100
 	log_interval = 20
-	decay_step = 5000
+	decay_step = 2000 * 5
 	decay_ratio = 0.5
 	weight_decay = 5e-4
 	seed = 1024
