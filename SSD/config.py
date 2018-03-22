@@ -16,7 +16,7 @@ class Config:
 	test_dataset_index = '../data/VOC_dataset/VOC2012/ImageSets/Main/test.txt'
 	test_img_dir = '../data/object_detection/VOC_dataset/VOC2012/JPEGImages/'
 	num_classes = 21
-	batch_size = 6
+	batch_size = 1
 	epochs = 100
 	log_interval = 20
 	decay_step = 2000 * 5
